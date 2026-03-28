@@ -1,0 +1,26 @@
+{
+  "name": "time-attendance-app",
+  "version": "1.0.0",
+  "description": "Cloud-based time attendance system with device integration",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "device-server"
+  ],
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../device-server && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:device\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:device": "cd device-server && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
