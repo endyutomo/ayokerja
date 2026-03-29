@@ -293,6 +293,297 @@ kill -9 <PID>
 - Verify device port configuration
 - Check device server logs
 
+## Deployment Guide (Online & Multi-User)
+
+Aplikasi ini sudah **multi-user ready** dengan fitur authentication, role-based access control, dan multi-tenant support. Berikut panduan untuk deploy ke production agar bisa diakses online.
+
+### 📋 Arsitektur Deployment
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   Frontend      │────▶│    Backend API   │────▶│   Supabase DB   │
+│   (Vercel)      │     │   (Railway)      │     │   (Cloud)       │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+                              │
+                              ▼
+                        ┌─────────────────┐
+                        │  Device Server  │
+                        │  (VPS $5/bln)   │
+                        └─────────────────┘
+```
+
+### 🚀 Platform Rekomendasi
+
+| Service | Platform | Biaya | Status |
+|---------|----------|-------|--------|
+| Database | Supabase | Gratis (500MB) | ✅ Sudah dikonfigurasi |
+| Backend | Railway / Render | $0-7/bln | Perlu deploy |
+| Frontend | Vercel | Gratis | Perlu deploy |
+| Device Server | DigitalOcean VPS | $5/bln | Perlu deploy |
+| Domain | Namecheap | ~$1/thn | Opsional |
+
+**Total Estimasi:** ~$6-13/bln
+
+---
+
+### Step 1: Environment Variables Production
+
+Buat file `backend/.env.production`:
+
+```env
+# Server Configuration
+PORT=3001
+NODE_ENV=production
+
+# Database (Supabase)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# JWT Configuration (PENTING: Ganti dengan yang baru!)
+JWT_SECRET=generate-new-secure-random-string-here-min-32-chars
+JWT_EXPIRE=7d
+
+# CORS Configuration
+FRONTEND_URL=https://your-domain.com
+SOCKET_CORS_ORIGIN=https://your-domain.com
+
+# Device Server Configuration
+DEVICE_SERVER_PORT=4370
+DEVICE_SERVER_HOST=your-vps-ip.com
+
+# Email Configuration (optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+---
+
+### Step 2: Deploy Backend (Railway)
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login ke Railway
+railway login
+
+# Initialize project di folder backend
+cd backend
+railway init
+
+# Deploy
+railway up
+
+# Set environment variables
+railway variables set NODE_ENV=production
+railway variables set JWT_SECRET=your-new-secret-key
+railway variables set FRONTEND_URL=https://your-domain.com
+railway variables set SUPABASE_URL=https://your-project.supabase.co
+# ... dst untuk variable lainnya
+```
+
+**Alternatif - Render.com:**
+
+1. Push code ke GitHub
+2. Buka https://render.com
+3. Create New Web Service
+4. Connect repository
+5. Root Directory: `backend`
+6. Build Command: `npm install`
+7. Start Command: `npm start`
+8. Add environment variables di dashboard
+
+---
+
+### Step 3: Deploy Frontend (Vercel)
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login
+vercel login
+
+# Deploy dari folder frontend
+cd frontend
+vercel
+
+# Set environment variables di Vercel Dashboard:
+# VITE_API_URL=https://your-backend-url.railway.app
+```
+
+**Build Settings di Vercel:**
+- Framework Preset: Create React App
+- Root Directory: `frontend`
+- Build Command: `npm run build`
+- Output Directory: `build`
+
+---
+
+### Step 4: Deploy Device Server (VPS)
+
+**Opsi A: DigitalOcean Droplet ($5/bln)**
+
+```bash
+# SSH ke VPS
+ssh root@your-vps-ip
+
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Clone repository
+git clone https://github.com/your-username/ayokerja.git
+cd ayokerja/device-server
+
+# Install dependencies
+npm install
+
+# Buat file .env
+nano .env
+```
+
+Isi `.env` untuk device-server:
+```env
+PORT=4370
+BACKEND_URL=https://your-backend-url.com
+```
+
+**Jalankan dengan PM2 (process manager):**
+
+```bash
+# Install PM2
+npm install -g pm2
+
+# Start device server
+pm2 start src/index.js --name device-server
+
+# Auto-start on boot
+pm2 startup
+pm2 save
+```
+
+**Opsi B: Cloudflare Tunnel (Tanpa VPS)**
+
+Jika ingin device server jalan di backend hosting:
+
+```bash
+# Install cloudflared
+# Di backend hosting, tambahkan tunnel untuk port 4370
+```
+
+---
+
+### Step 5: Setup Domain & SSL
+
+**Beli Domain (opsional):**
+
+```bash
+# Contoh di Namecheap
+# absensi-perusahaan.com - ~$10/tahun
+```
+
+**Setup DNS Records:**
+
+| Type | Name | Value |
+|------|------|-------|
+| A | @ | your-vps-ip |
+| CNAME | api | your-backend-url.railway.app |
+| CNAME | app | your-app.vercel.app |
+
+**SSL/HTTPS:** Otomatis aktif di Vercel, Railway, Render
+
+---
+
+### Step 6: Update CORS di Backend
+
+Edit `backend/src/index.js`:
+
+```javascript
+const cors = require('cors');
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+```
+
+---
+
+### Step 7: Keamanan Production
+
+** Checklist Keamanan:**
+
+- [ ] Ganti `JWT_SECRET` dengan string random baru (min 32 karakter)
+- [ ] Update password default user `admin`
+- [ ] Enable rate limiting (sudah ada di backend)
+- [ ] Setup backup database rutin (Supabase auto-backup)
+- [ ] Enable logging & monitoring
+- [ ] Setup firewall rules di VPS
+- [ ] Gunakan environment variables (jangan hardcode)
+
+**Generate JWT Secret baru:**
+
+```javascript
+// Di Node.js REPL
+require('crypto').randomBytes(32).toString('hex')
+// Copy hasil dan paste ke JWT_SECRET
+```
+
+---
+
+### Step 8: Monitoring & Maintenance
+
+**Logs:**
+
+```bash
+# Railway
+railway logs
+
+# Vercel
+vercel logs
+
+# VPS (PM2)
+pm2 logs device-server
+```
+
+**Backup Database:**
+
+```bash
+# Supabase auto-backup daily
+# Manual backup via Supabase Dashboard
+```
+
+---
+
+### Troubleshooting Deployment
+
+**Backend tidak bisa connect ke database:**
+```bash
+# Pastikan SUPABASE_URL dan keys benar
+# Check connection string di Supabase Dashboard
+```
+
+**CORS Error:**
+```bash
+# Update FRONTEND_URL di backend .env
+# Restart backend deployment
+```
+
+**Device tidak connect:**
+```bash
+# Pastikan port 4370 terbuka di firewall VPS
+# sudo ufw allow 4370/tcp
+# Check device server logs: pm2 logs device-server
+```
+
+---
+
 ## License
 
 MIT License - See LICENSE file for details.

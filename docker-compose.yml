@@ -1,0 +1,73 @@
+# Docker Compose for Production
+
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: attendance-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRE=7d
+      - FRONTEND_URL=${FRONTEND_URL}
+      - SOCKET_CORS_ORIGIN=${FRONTEND_URL}
+      - DEVICE_SERVER_HOST=${DEVICE_SERVER_HOST}
+    networks:
+      - attendance-network
+    depends_on:
+      - device-server
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: attendance-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - REACT_APP_API_URL=${BACKEND_URL}
+      - REACT_APP_DEVICE_SERVER_URL=${DEVICE_SERVER_WS_URL}
+    networks:
+      - attendance-network
+    depends_on:
+      - backend
+
+  # Device Server Service
+  device-server:
+    build:
+      context: ./device-server
+      dockerfile: Dockerfile
+    container_name: attendance-device-server
+    restart: unless-stopped
+    ports:
+      - "4370:4370/tcp"
+      - "4371:4371/udp"
+    environment:
+      - PORT=4370
+      - BACKEND_URL=http://backend:3001
+    networks:
+      - attendance-network
+    depends_on:
+      - backend
+
+networks:
+  attendance-network:
+    driver: bridge
