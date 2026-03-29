@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import Dashboard from '@mui/icons-material/Dashboard';
 import Badge from '@mui/icons-material/Badge';
 import People from '@mui/icons-material/People';
-import DevicesOther from '@mui/icons/devicesOther';
+import DevicesOther from '@mui/icons-material/DevicesOther';
 import Business from '@mui/icons-material/Business';
 import Schedule from '@mui/icons-material/Schedule';
 import BeachAccess from '@mui/icons-material/BeachAccess';

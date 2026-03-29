@@ -106,6 +106,48 @@ exports.getAll = async (req, res) => {
   }
 };
 
+// Get attendance by ID
+exports.getById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(`
+      SELECT
+        ar.*,
+        e.full_name,
+        e.employee_number,
+        e.photo_url,
+        d.name as department_name,
+        dev.name as check_in_device_name,
+        dev2.name as check_out_device_name
+      FROM attendance_records ar
+      LEFT JOIN employees e ON ar.employee_id = e.id
+      LEFT JOIN departments d ON e.department_id = d.id
+      LEFT JOIN devices dev ON ar.check_in_device_id = dev.id
+      LEFT JOIN devices dev2 ON ar.check_out_device_id = dev2.id
+      WHERE ar.id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Attendance record not found.',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Get attendance by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get attendance record.',
+    });
+  }
+};
+
 // Get today's attendance
 exports.getToday = async (req, res) => {
   try {

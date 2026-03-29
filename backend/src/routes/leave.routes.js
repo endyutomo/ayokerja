@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const leaveController = require('../controllers/leave.controller');
+const leaveController = require('../controllers/leave-supabase.controller');
 const { authMiddleware, authorize } = require('../middleware/auth');
 const { activityLogger } = require('../middleware/activityLogger');
 

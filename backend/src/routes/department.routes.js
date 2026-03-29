@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const departmentController = require('../controllers/department.controller');
+const departmentController = require('../controllers/department-supabase.controller');
 const { authMiddleware, authorize } = require('../middleware/auth');
 
 // All routes require authentication

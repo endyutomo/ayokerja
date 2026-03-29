@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const employeeController = require('../controllers/employee.controller');
+const employeeController = require('../controllers/employee-supabase.controller');
 const { authMiddleware, authorize } = require('../middleware/auth');
 const { activityLogger } = require('../middleware/activityLogger');
 

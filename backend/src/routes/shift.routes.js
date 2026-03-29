@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const shiftController = require('../controllers/shift.controller');
+const shiftController = require('../controllers/shift-supabase.controller');
 const { authMiddleware, authorize } = require('../middleware/auth');
 
 // All routes require authentication
